@@ -105,6 +105,7 @@ func (s *shell) Listen() error {
 					break
 				}
 				fmt.Println(line)
+				term.SetPrompt("test@test:docs/my-doc$ ")
 			}
 		}()
 	}
