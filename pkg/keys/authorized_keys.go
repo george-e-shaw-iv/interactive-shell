@@ -27,13 +27,13 @@ func GetAuthorizedKeys() (map[string]bool, error) {
 	return auth, nil
 }
 
-func AddAuthorizedKey(k ssh.PublicKey) error {
+func AddAuthorizedKey(b []byte) error {
 	f, err := os.OpenFile("authorized_keys", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		return err
 	}
 
-	if _, err = f.Write(ssh.MarshalAuthorizedKey(k)); err != nil {
+	if _, err = f.Write(b); err != nil {
 		return err
 	}
 

@@ -7,7 +7,6 @@ import (
 
 	"github.com/george-e-shaw-iv/interactive-shell/pkg/keys"
 	"github.com/george-e-shaw-iv/interactive-shell/pkg/shell"
-	"golang.org/x/crypto/ssh"
 )
 
 func main() {
@@ -17,12 +16,7 @@ func main() {
 			log.Fatalf("Fatal error trying to read new public key file: %s", err)
 		}
 
-		newAuthorizedKey, err := ssh.ParsePublicKey(b)
-		if err != nil {
-			log.Fatalf("Fatal error trying to parse new public key: %s", err)
-		}
-
-		err = keys.AddAuthorizedKey(newAuthorizedKey)
+		err = keys.AddAuthorizedKey(b)
 		if err != nil {
 			log.Fatalf("Fatal error trying to add new public key to authorized_keys file: %s", err)
 		}
