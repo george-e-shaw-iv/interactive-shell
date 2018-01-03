@@ -91,21 +91,26 @@ func (s *shell) Listen() error {
 
 		go func(in <-chan *ssh.Request) {
 			for req := range in {
-				req.Reply(req.Type == "shell", nil)
+				if req.Type == "shell" {
+					req.Reply(true, nil)
+				}
+				req.Reply(false, nil)
 			}
 		}(requests)
 
-		term := terminal.NewTerminal(channel, "> ")
+		term := terminal.NewTerminal(channel, "test@test:~$ ")
 
 		go func() {
 			defer channel.Close()
 			for {
-				line, err := term.ReadLine()
+				term.SetPrompt("test@test:docs/my-doc$ ")
+
+				text, err := term.ReadLine()
 				if err != nil {
 					break
 				}
-				fmt.Println(line)
-				term.SetPrompt("test@test:docs/my-doc$ ")
+
+				fmt.Println(text)
 			}
 		}()
 	}
