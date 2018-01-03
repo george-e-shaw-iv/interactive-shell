@@ -6,7 +6,7 @@ import (
 	"os"
 
 	"github.com/george-e-shaw-iv/interactive-shell/pkg/keys"
-	"github.com/george-e-shaw-iv/interactive-shell/pkg/shell"
+	"github.com/george-e-shaw-iv/interactive-shell/pkg/sshd"
 )
 
 func main() {
@@ -22,15 +22,6 @@ func main() {
 		}
 	}
 
-	s, err := shell.New(2222)
-	if err != nil {
-		log.Fatalf("Fatal error creating shell: %s", err)
-	}
-
-	log.Println("Interactive SSH server is listening for incoming connections.. To shutdown server press CTRL+C...")
-	for {
-		if err = s.Listen(); err != nil {
-			log.Printf("Listener log: %s", err)
-		}
-	}
+	daemon := sshd.New(2222)
+	log.Fatal(daemon.Listen())
 }
