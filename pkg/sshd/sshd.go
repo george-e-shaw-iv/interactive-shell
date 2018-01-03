@@ -8,8 +8,9 @@ import (
 	"github.com/george-e-shaw-iv/interactive-shell/pkg/keys"
 	"github.com/gliderlabs/ssh"
 	gossh "golang.org/x/crypto/ssh"
-	"fmt"
 	"io"
+	"strings"
+	"fmt"
 )
 
 type sshd struct {
@@ -18,7 +19,7 @@ type sshd struct {
 }
 
 func interactiveHandler(session ssh.Session) {
-	buffer := make([]byte, 128)
+	r := make([]byte, 1)
 
 	for {
 		_, err := io.WriteString(session, "Test Prompt: ")
@@ -27,19 +28,34 @@ func interactiveHandler(session ssh.Session) {
 			return
 		}
 
-		n, err := session.Read(buffer)
-		if err != nil {
-			log.Printf("Reading error within session (fp:%s): %s", session.Context().Value("public-key-fp"), err)
+		var msg []byte
+		for {
+			if _, err := session.Read(r); err != nil {
+				log.Printf("Reading error within session (fp:%s): %s", session.Context().Value("public-key-fp"), err)
+				return
+			}
+
+			//backspace
+			if r[0] == 127 {
+				msg = msg[:len(msg)-1]
+				continue
+			}
+
+			//end of command
+			if r[0] == 13 {
+				break
+			}
+			msg = append(msg, r[0])
+			io.WriteString(session, string(r[0]))
+		}
+
+		if strings.TrimSpace(string(msg)) == "exit" {
+			log.Printf("Session (fp:%s) has closed", session.Context().Value("public-key-fp"))
 			return
 		}
 
-		fmt.Println(string(buffer))
-
-		_, err = io.WriteString(session, string(buffer[:n])+"\n")
-		if err != nil {
-			log.Printf("Writing error within session (fp:%s): %s", session.Context().Value("public-key-fp"), err)
-			return
-		}
+		fmt.Println(msg)
+		io.WriteString(session, "\n")
 	}
 }
 
