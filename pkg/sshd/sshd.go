@@ -1,7 +1,6 @@
 package sshd
 
 import (
-	"io"
 	"io/ioutil"
 	"log"
 	"strconv"
@@ -10,6 +9,7 @@ import (
 	"github.com/gliderlabs/ssh"
 	gossh "golang.org/x/crypto/ssh"
 	"fmt"
+	"io"
 )
 
 type sshd struct {
@@ -27,7 +27,7 @@ func interactiveHandler(session ssh.Session) {
 			return
 		}
 
-		n, err := io.ReadAtLeast(session, buffer, 1)
+		n, err := session.Read(buffer)
 		if err != nil {
 			log.Printf("Reading error within session (fp:%s): %s", session.Context().Value("public-key-fp"), err)
 			return
