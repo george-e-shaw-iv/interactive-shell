@@ -11,7 +11,13 @@ import (
 	"io"
 	"strings"
 	"fmt"
+	"bytes"
+	"os/exec"
 )
+
+var allowedCommands = []string{
+	"ls", "cd", "rm", "mkdir", "touch",
+}
 
 type sshd struct {
 	Port   int
@@ -22,7 +28,9 @@ func interactiveHandler(session ssh.Session) {
 	r := make([]byte, 1)
 
 	for {
-		_, err := io.WriteString(session, "Test Prompt: ")
+		pwd, err := exec.Command("pwd").Output()
+
+		_, err = io.WriteString(session, session.User()+"@"+session.RemoteAddr().String()+":"+strings.TrimSpace(string(pwd))+"$ ")
 		if err != nil {
 			log.Printf("Writing error within session (fp:%s): %s", session.Context().Value("public-key-fp"), err)
 			return
@@ -37,7 +45,10 @@ func interactiveHandler(session ssh.Session) {
 
 			//backspace
 			if r[0] == 127 {
-				msg = msg[:len(msg)-1]
+				if len(msg) > 0 {
+					msg = msg[:len(msg)-1]
+					io.WriteString(session, "\b")
+				}
 				continue
 			}
 
@@ -49,13 +60,50 @@ func interactiveHandler(session ssh.Session) {
 			io.WriteString(session, string(r[0]))
 		}
 
+		io.WriteString(session, "\n")
+
 		if strings.TrimSpace(string(msg)) == "exit" {
+			err = session.Exit(0)
+			if err != nil {
+				log.Printf("Exiting error within session (fp:%s): %s", session.Context().Value("public-key-fp"), err)
+			}
+
 			log.Printf("Session (fp:%s) has closed", session.Context().Value("public-key-fp"))
 			return
 		}
 
-		fmt.Println(msg)
-		io.WriteString(session, "\n")
+		splitCommand := strings.Split(string(msg), " ")
+		args := splitCommand[1:]
+
+		cmdOk := false
+		for _, command := range allowedCommands {
+			if splitCommand[0] == command {
+				cmdOk = true
+				break
+			}
+		}
+
+		if !cmdOk {
+			io.WriteString(session, "Command \""+splitCommand[0]+"\" is not allowed by the server.\n")
+			continue
+		}
+
+		var cmdout bytes.Buffer
+		var cmderr bytes.Buffer
+
+		cmd := exec.Command(splitCommand[0], args...)
+		cmd.Stdout = &cmdout
+		cmd.Stderr = &cmderr
+
+		err = cmd.Run()
+		if err != nil {
+			io.WriteString(session, fmt.Sprint(err) + ": " + cmderr.String() + "\n")
+			continue
+		}
+		io.WriteString(session, cmdout.String())
+
+		fmt.Println(splitCommand[0])
+		fmt.Println(args)
 	}
 }
 
